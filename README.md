@@ -1,2 +1,11 @@
-# civ4-hermes-opponent
-Python-bridge mod to make Hermes (Quick AI agent) act as AI opponent in Civilization IV: Beyond the Sword. Experimental agentic organization project.
+# Hermes Civ 4 Opponent
+
+Quick AI LLC - Agentic Organization Experiment
+
+See modoutline.docx for development phases.
+
+Repo: https://github.com/Quick-AI-LLC/civ4-hermes-opponent
+
+## Status: Phase 1-2 Skeleton
+
+Setup instructions coming soon.
