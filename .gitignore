@@ -1,0 +1,7 @@
+# Civ4 mod files
+*.pyc
+Thumbs.db
+.DS_Store
+
+# Ignore local test artifacts
+mod/HermesOpponent/Assets/Python/__pycache__/

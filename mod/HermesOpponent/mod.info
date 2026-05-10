@@ -1,0 +1,5 @@
+[Mod]
+Name = HermesOpponent
+Version = 1.0
+Description = Hermes AI Opponent via Python TCP Bridge
+

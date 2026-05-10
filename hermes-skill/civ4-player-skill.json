@@ -1,0 +1,17 @@
+{
+  "name": "civ4_player",
+  "description": "Hermes skill for acting as Civ 4 opponent via TCP bridge.",
+  "parameters": {
+    "state": {
+      "type": "object",
+      "description": "Serialized minimal Civ4 game state JSON"
+    }
+  },
+  "returns": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "description": "List of executable Python commands for the mod to run"
+    }
+  }
+}
