@@ -1,0 +1,43 @@
+--- CvEventManager.py.bak	2026-05-31 10:32:51.850715700 -0700
++++ CvEventManager.py	2026-05-31 13:06:18.625201100 -0700
+@@ -21,6 +21,14 @@
+ import CvAdvisorUtils
+ import CvTechChooser
+ 
++HAS_HERMES = False
++try:
++    import hermes_bridge
++    HAS_HERMES = True
++    CvUtil.pyPrint("Hermes: Bridge loaded OK")
++except Exception, e:
++    CvUtil.pyPrint("Hermes: Bridge import FAILED - " + str(e))
++
+ gc = CyGlobalContext()
+ localText = CyTranslator()
+ PyPlayer = PyHelpers.PyPlayer
+@@ -365,10 +373,24 @@
+ 		'Called at the beginning of a players turn'
+ 		iGameTurn, iPlayer = argsList
+ 
++		# HermesOpponent integration - send state when it's the Hermes player's turn
++		if HAS_HERMES:
++			try:
++				hermes_bridge.on_hermes_player_turn(iPlayer)
++			except Exception, e:
++				print("Hermes Bridge call error: " + str(e))
++
+ 	def onEndPlayerTurn(self, argsList):
+ 		'Called at the end of a players turn'
+ 		iGameTurn, iPlayer = argsList
+-		
++
++		# HermesOpponent integration - run commands AFTER AI processing
++		if HAS_HERMES:
++			try:
++				hermes_bridge.on_hermes_player_turn(iPlayer)
++			except Exception, e:
++				print("Hermes Bridge end-turn error: " + str(e))
++
+ 		if (gc.getGame().getElapsedGameTurns() == 1):
+ 			if (gc.getPlayer(iPlayer).isHuman()):
+ 				if (gc.getPlayer(iPlayer).canRevolution(0)):

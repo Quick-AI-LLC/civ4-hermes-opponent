@@ -1,0 +1,2 @@
+# Dependencies (optional — the bridge uses stdlib only)
+# No external packages required.

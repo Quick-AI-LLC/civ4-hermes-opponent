@@ -1,0 +1,40 @@
+--- CvGameUtils.py.orig
++++ CvGameUtils.py
+@@ -213,6 +213,35 @@
+ 	def AI_chooseTech(self,argsList):
+ 		ePlayer = argsList[0]
++		# Hermes AI: pick the tech from the bridge commands if available
++		if ePlayer == 1:
++			import hermes_bridge
++			desired = hermes_bridge.get_desired_research()
++			if desired >= 0:
++				pTeam = gc.getTeam(gc.getPlayer(ePlayer).getTeam())
++				if not pTeam.isHasTech(desired):
++					import CvUtil
++					CvUtil.pyPrint("Hermes AI_chooseTech returning tech %d" % desired)
++					return desired
++				else:
++					import CvUtil
++					CvUtil.pyPrint("Hermes AI_chooseTech: tech %d already known, not overriding" % desired)
++			else:
++				import CvUtil
++				CvUtil.pyPrint("Hermes AI_chooseTech: desired=%d, using DLL default" % desired)
++		return TechTypes.NO_TECH
++
++	def AI_chooseProduction(self,argsList):
++		pCity = argsList[0]
++		# Hermes AI: let bridge decide production
++		if pCity.getOwner() == 1:
++			import hermes_bridge
++			return hermes_bridge.handle_ai_production(pCity)
++		return False
++
++	def AI_unitUpdate(self,argsList):
++		pUnit = argsList[0]
++		# Hermes AI: skip DLL movement for our units so our mission queues persist
++		if pUnit.getOwner() == 1:
++			return True
++		return False
+
+-	def AI_doWar(self,argsList):
++	def AI_doWar(self,argsList):
