@@ -31,11 +31,11 @@ The current implementation patches the base game files to hook Python callbacks 
 
 **Limitation:** The DLL AI still runs and can override agent decisions. Not all control paths are available (workers, diplomacy, civics).
 
-### 2. Hotseat (Full Control — Under Development)
+### 2. Hotseat (Full Control)
 
-In hotseat multiplayer mode, player 2 is a **human slot** — the DLL does not override anything. The same bridge hooks into the player 2 turn and executes commands with **total control**: workers, tiles, diplomacy, civic switching, everything.
+In hotseat multiplayer mode, player 2 is a **human slot** — no DLL AI runs. The bridge hooks `onBeginPlayerTurn` for P2, executes commands (including research via `pushResearch`), then auto-ends the turn via `CyMessageControl().sendTurnComplete()` so control returns to P1 without keyboard input.
 
-Both models use the same bridge and protocol. Only the game-side hook code differs.
+Both models use the same WSL bridge and protocol. Only the Windows-side Python client and `CvEventManager` hook differ.
 
 ## Quick Start
 
@@ -107,16 +107,36 @@ See `docs/protocol.md` for the complete state JSON and command JSON schemas.
 | `civ4_state.json` | `~/.hermes/` (WSL) | Game state from Civ4 → Agent |
 | `civ4_commands.json` | `~/.hermes/` (WSL) + `C:\Users\<user>\.hermes\` (Windows) | Agent commands → Civ4 |
 
-## Hotseat Model (Planned)
+## Hotseat Model
 
-The hotseat variant will give the agent **full control** over its civilization without DLL interference:
+The hotseat variant gives the agent **full control** over P2 without DLL AI interference:
 
-- Player 1: Human (keyboard/mouse)
-- Player 2: Agent (TCP bridge)
-- All DLL AI bypassed — agent controls workers, tiles, diplomacy, civics
-- Same bridge, same protocol — only the event hook logic changes
+- Player 1 (slot 0): Human (keyboard/mouse, unchanged)
+- Player 2 (slot 1): Agent (TCP bridge)
+- No `CvGameUtils.py` patches needed — `AI_chooseTech` / `AI_chooseProduction` / `AI_unitUpdate` do not fire for human slots
+- Research and builds are applied directly in `exec_cmds()` on the begin-turn hook
+- Turn auto-ends after command execution via `onUpdate` polling (no keyboard input required)
+- **Important:** `onBeginPlayerTurn` / `onEndPlayerTurn` fire during automated `doTurn()` resolution, not when hotseat hands control to P2. The hook must be `onUpdate` + `tick_hotseat()`.
 
-See `models/hotseat/` for the in-progress implementation.
+### Install Hotseat Files
+
+Copy from `mod/hotseat/` instead of `mod/game-files/`:
+
+```
+copy mod\hotseat\game-files\hermes_bridge.py   "...\Beyond the Sword\Assets\Python\"
+copy mod\game-files\simplejson.py              "...\Beyond the Sword\Assets\Python\"
+```
+
+Apply the hotseat event hook (not the standard one):
+
+```bash
+# In Beyond the Sword/Assets/Python/
+patch < mod/hotseat/patches/CvEventManager.py.diff
+```
+
+Repeat for `Warlords/Assets/Python/`. **Do not** apply `mod/patches/CvGameUtils.py.diff` — restore vanilla `CvGameUtils.py` if previously patched.
+
+Start a **hotseat** game with two human slots. P1 plays normally; on P2's turn the bridge fires, executes commands, and auto-transitions back to P1.
 
 ## Tech Tree Reference
 
@@ -130,12 +150,17 @@ civ4-hermes-opponent/
 │   ├── civ4_bridge.py        # Pure relay, no AI logic
 │   └── requirements.txt
 ├── mod/
-│   ├── game-files/           # Copy these into Assets/Python/
+│   ├── game-files/           # Standard model — copy into Assets/Python/
 │   │   ├── hermes_bridge.py  # Windows-side game client (Python 2.4)
 │   │   └── simplejson.py     # JSON lib for Python 2.4
-│   └── patches/              # Unified diffs for existing files
-│       ├── CvEventManager.py.diff
-│       └── CvGameUtils.py.diff
+│   ├── patches/              # Standard model patches
+│   │   ├── CvEventManager.py.diff
+│   │   └── CvGameUtils.py.diff
+│   └── hotseat/              # Hotseat model (full P2 control)
+│       ├── game-files/
+│       │   └── hermes_bridge.py
+│       └── patches/
+│           └── CvEventManager.py.diff
 ├── docs/
 │   ├── protocol.md           # State/command JSON schemas
 │   └── tech-reference.md     # Tech IDs, unit type IDs

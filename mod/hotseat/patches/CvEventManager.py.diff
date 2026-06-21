@@ -1,0 +1,45 @@
+--- CvEventManager.py.bak	2026-05-31 10:32:51.850715700 -0700
++++ CvEventManager.py	2026-06-05 00:00:00.000000000 -0700
+@@ -21,6 +21,14 @@
+ import CvAdvisorUtils
+ import CvTechChooser
+ 
++HAS_HERMES = False
++try:
++    import hermes_bridge
++    HAS_HERMES = True
++    CvUtil.pyPrint("Hermes: Hotseat bridge loaded OK")
++except Exception, e:
++    CvUtil.pyPrint("Hermes: Hotseat bridge import FAILED - " + str(e))
++
+ gc = CyGlobalContext()
+ localText = CyTranslator()
+ PyPlayer = PyHelpers.PyPlayer
+@@ -298,6 +306,13 @@
+ 		
+ 		# allow camera to be updated
+ 		CvCameraControls.g_CameraControls.onUpdate( fDeltaTime )
++
++		# Hermes hotseat: poll for P1 action phase after handoff popup dismissed
++		if HAS_HERMES:
++			try:
++				hermes_bridge.tick_hotseat()
++			except Exception, e:
++				CvUtil.pyPrint("Hermes tick_hotseat error: " + str(e))
+ 		
+ 	def onWindowActivation(self, argsList):
+ 		'Called when the game window activates or deactivates'
+@@ -365,6 +380,14 @@
+ 	def onEndPlayerTurn(self, argsList):
+ 		'Called at the end of a players turn'
+ 		iGameTurn, iPlayer = argsList
++
++		# Hermes hotseat: stage P1 research/builds before handoff popup
++		if HAS_HERMES and iPlayer == 0:
++			try:
++				hermes_bridge.stage_orders()
++			except Exception, e:
++				CvUtil.pyPrint("Hermes stage_orders error: " + str(e))
+ 		
+ 		if (gc.getGame().getElapsedGameTurns() == 1):
+ 			if (gc.getPlayer(iPlayer).isHuman()):

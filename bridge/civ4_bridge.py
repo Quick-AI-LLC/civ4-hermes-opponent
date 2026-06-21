@@ -5,9 +5,21 @@ Listens for game state from the Civ4 Python SDK client and returns pending comma
 import socket, json, os, threading, shutil, time
 HOST, PORT = "0.0.0.0", 3334
 STATE = os.path.expanduser("~/.hermes/civ4_state.json")
+GATE = os.path.expanduser("~/.hermes/turn_gate.json")
 CMDS = os.path.expanduser("~/.hermes/civ4_commands.json")
 WIN = os.path.expanduser("/mnt/c/Users/gainq/.hermes/civ4_commands.json")
 running = True
+
+
+def _reply(conn, cmds):
+    conn.sendall((json.dumps(cmds) + "\n").encode())
+
+
+def _load_cmds():
+    if not os.path.exists(CMDS):
+        return []
+    with open(CMDS) as f:
+        return json.load(f)
 
 
 def handle(conn):
@@ -23,20 +35,37 @@ def handle(conn):
                 break
         if not d:
             return
-        st = json.loads(d.decode().strip())
-        st["_received_at"] = time.time()
+        payload = json.loads(d.decode().strip())
+        payload["_received_at"] = time.time()
+
+        # Hotseat handoff signal — not a full game state; do not overwrite civ4_state.json
+        if payload.get("event") == "handoff_pending":
+            with open(GATE, "w") as f:
+                json.dump(payload, f, indent=2)
+            print(
+                "HANDOFF pending: P{} turn {}".format(
+                    payload.get("player_id", "?"), payload.get("turn", "?")
+                )
+            )
+            _reply(conn, [])
+            return
+
         with open(STATE, "w") as f:
-            json.dump(st, f, indent=2)
-        print(f"T{st.get('turn','?')}: {st.get('numCities',0)}c {st.get('numUnits',0)}u")
-        cmds = []
+            json.dump(payload, f, indent=2)
+        print(
+            "T{}: {}c {}u".format(
+                payload.get("turn", "?"),
+                payload.get("numCities", 0),
+                payload.get("numUnits", 0),
+            )
+        )
+        cmds = _load_cmds()
         if os.path.exists(CMDS):
-            with open(CMDS) as f:
-                cmds = json.load(f)
             try:
                 shutil.copy2(CMDS, WIN)
             except Exception:
                 pass
-        conn.sendall((json.dumps(cmds) + "\n").encode())
+        _reply(conn, cmds)
     except Exception as e:
         print(f"ERR: {e}")
     finally:
